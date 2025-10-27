@@ -1,3 +1,4 @@
+import pytest
 from times import time_range, compute_overlap_time
 
 def test_given_input():
@@ -41,3 +42,8 @@ def test_touching_ranges():
 
     result = compute_overlap_time(first, second)
     assert result == []  # Just a brief contact, no overlap.
+
+# negative test case: end_time earlier than start_time
+def test_time_range_backwards_raises():
+    with pytest.raises(ValueError, match="must be after"):
+        time_range("2010-01-12 12:00:00", "2010-01-12 10:00:00")
