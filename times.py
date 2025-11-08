@@ -1,16 +1,23 @@
 import datetime
+import requests 
 
 
 def time_range(start_time, end_time, number_of_intervals=1, gap_between_intervals_s=0):
     start_time_s = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
     end_time_s = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
-    # Input check: The end_time must not be earlier than the start_time.
+  
     if end_time_s <= start_time_s:
         raise ValueError(f"end_time {end_time} must be after start_time {start_time}")
-    d = (end_time_s - start_time_s).total_seconds() / number_of_intervals + gap_between_intervals_s * (1 / number_of_intervals - 1)
-    sec_range = [(start_time_s + datetime.timedelta(seconds=i * d + i * gap_between_intervals_s),
-                  start_time_s + datetime.timedelta(seconds=(i + 1) * d + i * gap_between_intervals_s))
-                 for i in range(number_of_intervals)]
+
+    d = (end_time_s - start_time_s).total_seconds() / number_of_intervals + \
+        gap_between_intervals_s * (1 / number_of_intervals - 1)
+    sec_range = [
+        (
+            start_time_s + datetime.timedelta(seconds=i * d + i * gap_between_intervals_s),
+            start_time_s + datetime.timedelta(seconds=(i + 1) * d + i * gap_between_intervals_s)
+        )
+        for i in range(number_of_intervals)
+    ]
     return [(ta.strftime("%Y-%m-%d %H:%M:%S"), tb.strftime("%Y-%m-%d %H:%M:%S")) for ta, tb in sec_range]
 
 
@@ -20,12 +27,36 @@ def compute_overlap_time(range1, range2):
         for start2, end2 in range2:
             low = max(start1, start2)
             high = min(end1, end2)
-            
-            if low < high:  ##### newly added
-                overlap_time.append((low, high)) #### newly added
+            if low < high:   
+                overlap_time.append((low, high))
     return overlap_time
 
+
+
+def iss_passes(lat, lon, alt=0, days=5, min_visibility=50, api_key="DEMO_KEY"):
+
+    url = (
+        f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
+        f"25544/{lat}/{lon}/{alt}/{days}/{min_visibility}/&apiKey={api_key}"
+    )
+
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+
+    passes = data.get("passes", [])
+    result = []
+    for p in passes:
+        start = datetime.datetime.fromtimestamp(p["startUTC"]).strftime("%Y-%m-%d %H:%M:%S")
+        end = datetime.datetime.fromtimestamp(p["endUTC"]).strftime("%Y-%m-%d %H:%M:%S")
+        result.append((start, end))
+    return result
+
+
 if __name__ == "__main__":
+   
     large = time_range("2010-01-12 10:00:00", "2010-01-12 12:00:00")
     short = time_range("2010-01-12 10:30:00", "2010-01-12 10:45:00", 2, 60)
     print(compute_overlap_time(large, short))
+
+ 

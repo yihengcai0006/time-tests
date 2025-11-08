@@ -45,3 +45,23 @@ def test_time_range_backwards_raises():
         time_range("2010-01-12 12:00:00", "2010-01-12 10:00:00")
 
 
+from unittest.mock import patch
+from times import iss_passes
+
+@patch("times.requests.get")
+def test_iss_passes_mock(mock_get):
+    
+    fake_response = {
+        "passes": [
+            {"startUTC": 1700000000, "endUTC": 1700000600},
+            {"startUTC": 1700001000, "endUTC": 1700001600},
+        ]
+    }
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = fake_response
+
+    result = iss_passes(lat=56, lon=0, api_key="fake-key")
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert all(isinstance(r[0], str) and isinstance(r[1], str) for r in result)
+    mock_get.assert_called_once()
